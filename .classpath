@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="lib" path="/home/data/projets/lib/sqlite-jdbc-3.7.2.jar"/>
+	<classpathentry kind="lib" path="/home/data/projets/lib/jsoup-1.7.3.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/home/data/projets/lib/jsoup-1.7.3-javadoc.jar!/"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="/home/data/projets/lib/zip4j_1.3.2.jar"/>
+	<classpathentry kind="lib" path="/home/data/projets/lib/commons-lang3-3.3.2.jar" sourcepath="/home/data/projets/lib/commons-lang3-3.3.2-src.zip">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/home/data/projets/lib/commons-lang3-3.3.2-javadoc.jar!/"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="output" path="bin"/>
+</classpath>
