@@ -24,6 +24,7 @@ public class Glossary {
 	private static Map<String, Integer> bookNumbers = new HashMap<String, Integer>();
 	private static Set<String> history = new HashSet<String>();
 	private static String sourcePath;
+	private static String bibleRef = null;
 
 	static {
 		/*  Ancien Testament  */
@@ -169,8 +170,48 @@ public class Glossary {
 					if (suite.trim().isEmpty() || suite.startsWith("<span class=\"label\">"))
 						continue;
 
+					if (suite.startsWith(",") && Character.isDigit(suite.charAt(1)) && bibleRef != null) {
+
+						// Nous étions dans une référence, et nous avons là des versets.
+						// Par exemple: 1 S 10:6,10
+						// La référence sur 1 S 10:6 a déjà été faite,
+						// on va ajouter maintenant la référence vers 1 S 10:6:10
+
+						String[] tabRef = suite.split(",");
+						for (String ref: tabRef) {
+							if (ref.isEmpty())
+								continue;
+
+							if (! Character.isDigit(ref.charAt(0))) {
+								result.append(StringEscapeUtils.unescapeHtml4(ref));
+								continue;
+							}
+
+							StringBuilder text = new StringBuilder(ref);
+							StringBuilder verseNumber = new StringBuilder();
+
+							for (int i = 0; i < text.length(); i++) {
+								char c = text.charAt(i);
+								if (Character.isDigit(c) || c == '-')
+									verseNumber.append(c);
+							}
+
+							text.delete(0, verseNumber.length()); // Pour garder le texte "non numéro de verset"
+
+							// Création de la nouvelle référence
+							StringBuilder newRef = new StringBuilder(bibleRef.substring(0, bibleRef.lastIndexOf('.') +1));
+							newRef.append(verseNumber).append("\">").append(verseNumber).append("</a>");
+
+							result.append(",").append(newRef).append(text);
+						}
+
+						bibleRef = null;
+						continue;
+					}
+
 					if (suite.startsWith("<a class=\"reference\"")) {
-						result.append(getBibleLink(suite));
+						bibleRef = getBibleLink(suite);
+						result.append(bibleRef);
 						continue;
 					}
 
