@@ -3,10 +3,12 @@ package org.colombe.glossaries;
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import org.apache.commons.lang3.StringEscapeUtils;
 import org.jsoup.Jsoup;
@@ -18,7 +20,9 @@ public class Glossary {
 
 	public static Map<String, String> abrev = new LinkedHashMap<String, String>();
 
+	private static Map<String, String> glossary = new HashMap<String, String>();
 	private static Map<String, Integer> bookNumbers = new HashMap<String, Integer>();
+	private static Set<String> history = new HashSet<String>();
 	private static String sourcePath;
 
 	static {
@@ -119,48 +123,102 @@ public class Glossary {
 		sourcePath = value;
 	}
 
-	public static String getGlossaryLink(String hrefLink)
+	public static String getGlossaryLink(String hrefLink, boolean fromGlossary)
 	{
 		Document d = Jsoup.parse(hrefLink);
 		String s1 = d.text();
 
-		String s2 = hrefLink.substring(hrefLink.indexOf("href=") + 6); // href="
-		s2 = s2.substring(0, s2.indexOf('"')); // Pour enlever le dernier "
-		String[] refs = s2.split("#");
+		String[] refs = getHrefParams(hrefLink);
 		String file = refs[0];
-		String key = refs[1];
+		String key  = refs[1];
 
-		String definition = getDefinition(sourcePath + File.separatorChar + file, key);
-		s1 = "<RF q=*><b>" + s1 + "</b>: " + definition + "<Rf>" + s1;
+		String definition = getDefinition(file, key);
+		if (fromGlossary) {
 
-		return s1;
+			definition = definition.replace("%", "%25");
+			definition = definition.replace("\"", "%27");
+			definition = definition.replace("'", "%27");
+			definition = definition.replace(">", "%3E");
+
+			return "<a href=\"r" + definition + "\">" + s1 + "</a>";
+		}
+
+		return "<RF q=*><b>" + s1 + "</b>:" + definition + "<Rf>" + s1;
 	}
 
-	private static boolean isMonoChapter(String ref)
+	private static String[] getHrefParams(String hrefLink)
 	{
-		return ref.startsWith("Obad") ||
-				ref.startsWith("Phlm") ||
-				ref.startsWith("2 Jn") ||
-				ref.startsWith("3 Jn") ||
-				ref.startsWith("Jude");
+		String hrefParams = hrefLink.substring(hrefLink.indexOf("href=") + 6); // href="
+		hrefParams = hrefParams.substring(0, hrefParams.indexOf('"')); // Pour enlever le dernier "
+
+		return hrefParams.split("#");
+	}
+
+	private static String getDefinition(String xmlFile, String key)
+	{
+		if (! glossary.containsKey(key)) {
+
+			StringBuilder result = new StringBuilder();
+			history.add(key); // Pour ne pas entrer en référence circulaire (Esprit -> Vent -> Esprit... )
+
+			try {
+				File f = new File(sourcePath + File.separatorChar + xmlFile);
+				Document doc = Jsoup.parse(f, "UTF-8");
+				Element parent = doc.select("div.item > span.label > a[id=" + key + "]").parents().get(1);
+				List<Node> itemList = parent.childNodes();
+				for (Node p: itemList) {
+
+					String suite = p.toString();
+					if (suite.trim().isEmpty() || suite.startsWith("<span class=\"label\">"))
+						continue;
+
+					if (suite.startsWith("<a class=\"reference\"")) {
+						result.append(getBibleLink(suite));
+						continue;
+					}
+
+					if (suite.contains("<a class=\"w-gloss\"")) {
+						String[] refs = getHrefParams(suite);
+						String nextKey = refs[1];
+
+						if (history.contains(nextKey)) {
+							Document d = Jsoup.parse(suite);
+							result.append(" *").append(d.text()).append(" "); // On coupe la référence circulaire
+							continue;
+						}
+
+						suite = getGlossaryLink(suite, true);
+					}
+
+					result.append(StringEscapeUtils.unescapeHtml4(suite));
+				}
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+
+			glossary.put(key, result.toString()); // Pour aller plus vite la prochaine fois...
+			history.remove(key);
+		}
+
+		return glossary.get(key);
 	}
 
 	private static String getBibleLink(String hrefLink)
 	{
 		StringBuilder result = new StringBuilder("<a class=\"bible\" href=\"#b");
 
+		// On extrait le nom du livre à partir du href
 		String part1 = hrefLink.split("href=\"")[1];
-		String sep = "-"; // Comme dans 2Cor-3.xml
-		if (! part1.contains(sep))
-			sep = ".xml"; // Concerne les livres sans chapitre (bug de l'editeur, aurait du etre jude-1.xml par exemple)
+		String book = part1.split(".xml")[0];
+		if (part1.contains("-"))
+			book = book.split("-")[0];
 
-		String book = part1.substring(0, part1.indexOf(sep));
 		result.append(bookNumbers.get(book));
 
 		String part2 = hrefLink.substring(hrefLink.indexOf('>') +1, hrefLink.indexOf("</"));
 		if (Character.isDigit(part2.charAt(part2.length() -1))) {
-			// Si le dernier caractère est un chiffre, on complète le lien
 
+			// Si le dernier caractère est un chiffre, on complète le lien
 			result.append('.');
 			if (part2.contains(" ")) {
 
@@ -178,7 +236,7 @@ public class Glossary {
 
 		// Partie visible du lien
 		if (! part2.contains(" "))
-			result.append(abrev.get(book)).append(" "); // on affiche le livre s'il n'y était pas déjà
+			result.append(abrev.get(book)).append(" "); // on ajoute le nom du livre
 
 		part2 = part2.replace(".", ":");
 		result.append(part2).append("</a>");
@@ -186,40 +244,12 @@ public class Glossary {
 		return result.toString();
 	}
 
-	public static String getDefinition(String xmlFile, String key)
+	private static boolean isMonoChapter(String ref)
 	{
-		StringBuilder result = new StringBuilder();
-
-		try {
-			File f = new File(xmlFile);
-			Document doc = Jsoup.parse(f, "UTF-8");
-			Element parent = doc.select("div.item > span.label > a[id=" + key + "]").parents().get(1);
-			List<Node> itemList = parent.childNodes();
-			for (Node p: itemList) {
-
-				String s = p.toString();
-				if (s.startsWith("<span class=\"label\">"))
-					continue;
-
-				if (s.startsWith("<a class=\"reference\"")) {
-					result.append(getBibleLink(s));
-					continue;
-				}
-
-				if (s.contains("<a class=\"w-gloss\"")) {
-					Document d = Jsoup.parse(s);
-					result.append(" *").append(d.text()).append(" ");
-					continue;
-				}
-
-				String suite = s.trim();
-
-				result.append(StringEscapeUtils.unescapeHtml4(suite));
-			}
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-
-		return result.toString();
+		return  ref.startsWith("Obad") ||
+				ref.startsWith("Phlm") ||
+				ref.startsWith("2 Jn") ||
+				ref.startsWith("3 Jn") ||
+				ref.startsWith("Jude");
 	}
 }

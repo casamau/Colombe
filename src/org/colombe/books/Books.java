@@ -27,7 +27,6 @@ public class Books {
 	private int numVerse;
 
 	private boolean fromGlossary;
-	private boolean debug = false;
 
 	private LinkedHashSet<BookStructure> data;
 	private BookStructure oldBS = null;
@@ -36,11 +35,11 @@ public class Books {
 	{
 		this.sourcePath = sourcePath;
 		Glossary.setSourcePath(sourcePath);
-
+/**/
 		for (Entry<String, String> b: Glossary.abrev.entrySet())
 			books.put(b.getKey(), null);
 
-//		books.put("Matt", null);
+//		books.put("Gen", null);
 	}
 
 	public LinkedHashMap<String, LinkedHashSet<BookStructure>> getBooks()
@@ -103,8 +102,8 @@ public class Books {
 				e.printStackTrace();
 			}
 
-			if (books.size() == 1)
-				break; // Code de débogage: si on ne génère qu'un seul livre, on s'arrete au premier chapitre
+//			if (books.size() == 1)
+//				break; // Code de débogage: si on ne génère qu'un seul livre, on s'arrete au premier chapitre
 		}
 	}
 
@@ -140,6 +139,7 @@ public class Books {
 			return;
 
 		if (s.startsWith("<a class=\"verse\"")) {
+
 			// Cloture du verset précédent
 			if (verse.length() > 0) {
 				printVerse(verse.toString());
@@ -153,16 +153,9 @@ public class Books {
 		Document d = Jsoup.parse(s);
 		String s1 = d.text();
 		if (s.startsWith("<a class=\"w-gloss\"") || fromGlossary) {
-			if (! fromGlossary) {
-				String s2 = s.substring(s.indexOf("href=") + 6); // href="
-				s2 = s2.substring(0, s2.indexOf('"')); // Pour enlever le dernier "
-				String[] refs = s2.split("#");
-				String file = refs[0];
-				String key = refs[1];
 
-				String definition = Glossary.getDefinition(sourcePath + File.separatorChar + file, key);
-				s1 = "<RF q=*><b>" + s1 + "</b>: " + definition + "<Rf>" + s1;
-			}
+			if (! fromGlossary)
+				s1 = Glossary.getGlossaryLink(s, false);
 
 			addSpace(s1, verse);
 			fromGlossary = ! fromGlossary;
@@ -184,9 +177,6 @@ public class Books {
 			StringBuilder old = new StringBuilder(oldBS.getVerse()).append(verse);
 			oldBS.setVerse(old.toString());
 		}
-
-		if (debug)
-			System.out.println(oldBS);
 	}
 
 	/*
