@@ -126,24 +126,21 @@ public class Glossary {
 	public static String getGlossaryLink(String hrefLink, boolean fromGlossary)
 	{
 		Document d = Jsoup.parse(hrefLink);
-		String s1 = d.text();
+		String word = d.text();
 
-		String[] refs = getHrefParams(hrefLink);
-		String file = refs[0];
-		String key  = refs[1];
-
-		String definition = getDefinition(file, key);
+		String[] fileKey = getHrefParams(hrefLink);
+		String definition = getDefinition(fileKey[0], fileKey[1], fromGlossary);
 		if (fromGlossary) {
 
-			definition = definition.replace("%", "%25");
+			definition = definition.replace("%",  "%25");
 			definition = definition.replace("\"", "%27");
-			definition = definition.replace("'", "%27");
-			definition = definition.replace(">", "%3E");
+			definition = definition.replace("'",  "%27");
+			definition = definition.replace(">",  "%3E");
 
-			return "<a href=\"r" + definition + "\">" + s1 + "</a>";
+			return "<a href=\"r" + definition + "\">" + word + "</a>";
 		}
 
-		return "<RF q=*><b>" + s1 + "</b>:" + definition + "<Rf>" + s1;
+		return "<RF q=*><b>" + word + "</b>:" + definition + "<Rf>" + word;
 	}
 
 	private static String[] getHrefParams(String hrefLink)
@@ -154,7 +151,7 @@ public class Glossary {
 		return hrefParams.split("#");
 	}
 
-	private static String getDefinition(String xmlFile, String key)
+	private static String getDefinition(String xmlFile, String key, boolean fromGlossary)
 	{
 		if (! glossary.containsKey(key)) {
 
@@ -196,8 +193,11 @@ public class Glossary {
 				e.printStackTrace();
 			}
 
-			glossary.put(key, result.toString()); // Pour aller plus vite la prochaine fois...
 			history.remove(key);
+			if (fromGlossary)
+				return result.toString(); // Pour ne pas mémoriser (et ressortir) une définition éventuellement limitée du aux ref. circulaires
+
+			glossary.put(key, result.toString()); // Pour aller plus vite la prochaine fois...
 		}
 
 		return glossary.get(key);
