@@ -125,8 +125,8 @@ public class Glossary {
 
 	public static String getGlossaryLink(String hrefLink, boolean fromGlossary)
 	{
-		Document d = Jsoup.parse(hrefLink);
-		String word = d.text();
+		Document doc = Jsoup.parse(hrefLink);
+		String word = doc.text();
 
 		String[] fileKey = getHrefParams(hrefLink);
 		String definition = getDefinition(fileKey[0], fileKey[1], fromGlossary);
