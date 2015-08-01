@@ -22,6 +22,7 @@ public class Glossary {
 
 	private static Map<String, String> glossary = new HashMap<String, String>();
 	private static Map<String, Integer> bookNumbers = new HashMap<String, Integer>();
+	public static Map<String, Integer> bookAbrevNumbers = new HashMap<String, Integer>();
 	private static Set<String> history = new HashSet<String>();
 	private static String sourcePath;
 	private static String bibleRef = null;
@@ -116,6 +117,7 @@ public class Glossary {
 		int i = 1;
 		for (Entry<String, String> ab: abrev.entrySet()) {
 			bookNumbers.put(ab.getKey(), i);
+			bookAbrevNumbers.put(ab.getValue(), i);
 			i++;
 		}
 	}
@@ -254,7 +256,7 @@ public class Glossary {
 		if (part1.contains("-"))
 			book = book.split("-")[0];
 
-		result.append(bookNumbers.get(book));
+		result.append(bookNumbers.get(book)); // <a class="bible" href="#b19
 
 		String part2 = hrefLink.substring(hrefLink.indexOf('>') +1, hrefLink.indexOf("</"));
 		if (Character.isDigit(part2.charAt(part2.length() -1))) {
@@ -264,13 +266,12 @@ public class Glossary {
 			if (part2.contains(" ")) {
 
 				String[] ref = part2.split(" ");
-				if (isMonoChapter(part2))
+				if (isSingleChapter(part2))
 					result.append("1."); // Le chapitre 1 est sous-entendu
 
 				result.append(ref[ref.length -1]); // Dans 2 Tim 2.3, ce qui nous interresse, c'est 2.3
-			} else {
+			} else
 				result.append(part2); // 3.14 (renvoie au chapitre 3, verset 14 du livre courrant)
-			}
 		}
 
 		result.append("\">"); // Termine la balise <a href> commencé dès le début
@@ -285,7 +286,7 @@ public class Glossary {
 		return result.toString();
 	}
 
-	private static boolean isMonoChapter(String ref)
+	public static boolean isSingleChapter(String ref)
 	{
 		return  ref.startsWith("Obad") ||
 				ref.startsWith("Phlm") ||

@@ -39,23 +39,20 @@ public class BibleCreator
 		stmt.close();
 	}
 
-	private void addScripture() {
-
+	private void addScripture()
+	{
 		LinkedHashMap<String, LinkedHashSet<BookStructure>> bible = books.getBooks();
 
 		insertSQL("BEGIN TRANSACTION;");
 
 		for (Entry<String, LinkedHashSet<BookStructure>> b: bible.entrySet()) {
+
 			LinkedHashSet<BookStructure> data = b.getValue();
-			for (BookStructure bs: data) {
+			for (BookStructure bs: data)
 				addText(bs);
-				//System.out.println(bs);
-			}
 		}
 
 		insertSQL("COMMIT;");
-
-		System.out.println("Termine");
 	}
 
 	private void addText(BookStructure bs)
@@ -80,13 +77,13 @@ public class BibleCreator
 
 	private void addDetail()
 	{
-		Date aujourdhui = new Date();
+		Date today = new Date();
 		DateFormat shortDateFormatFR = DateFormat.getDateTimeInstance(
 				DateFormat.MEDIUM,
 				DateFormat.MEDIUM, new Locale("FR","fr"));
 
-		String date = shortDateFormatFR.format(aujourdhui);
-		String annee = date.split(" ")[2];
+		String date = shortDateFormatFR.format(today);
+		String year = date.split(" ")[2];
 
 		String sql = "insert into details ("
 				+ "'Description', "
@@ -108,7 +105,7 @@ public class BibleCreator
 				+ "'Nouvelle Version Segond révisée 1978 (Colombe)', "
 				+ "'2.0', "
 				+ "'" + date  + "', "
-				+ "'" + annee + "', "
+				+ "'" + year + "', "
 				+ "'0', "
 				+ "'1', "
 				+ "'1', "

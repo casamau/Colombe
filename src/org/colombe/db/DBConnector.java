@@ -17,8 +17,8 @@ public class DBConnector {
 
 	private void checkConnection()
 	{
-		if (dbConnector == null)
-		{
+		if (dbConnector == null) {
+
 			try {
 				Class.forName("org.sqlite.JDBC");
 				dbConnector = DriverManager.getConnection("jdbc:sqlite:" + bibleName);

@@ -8,8 +8,10 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map.Entry;
+import java.util.Stack;
 
 import org.colombe.glossaries.Glossary;
+import org.colombe.utils.ReferenceUtil;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -35,11 +37,12 @@ public class Books {
 	{
 		this.sourcePath = sourcePath;
 		Glossary.setSourcePath(sourcePath);
-/**/
+
 		for (Entry<String, String> b: Glossary.abrev.entrySet())
 			books.put(b.getKey(), null);
 
-//		books.put("Gen", null);
+//		books.put("2Sam", null);
+//		books.put("1Chr", null);
 	}
 
 	public LinkedHashMap<String, LinkedHashSet<BookStructure>> getBooks()
@@ -50,11 +53,11 @@ public class Books {
 	public void createBooks()
 	{
 		numBook = 0;
-		for (Entry<String, LinkedHashSet<BookStructure>> e: books.entrySet())
-		{
+		for (Entry<String, LinkedHashSet<BookStructure>> e: books.entrySet()) {
+
 			numBook++;
-			String book = e.getKey();
 			data = new LinkedHashSet<BookStructure>();
+			String book = e.getKey();
 			createBook(book);
 			e.setValue(data);
 		}
@@ -65,118 +68,141 @@ public class Books {
 		File[] bookFiles = findXMLFiles(name);
 
 		numChapter = 0;
-		for (File f: bookFiles)
-		{
+		for (File fChapter: bookFiles) {
+
 			numChapter++;
-			System.out.println(f);
+			System.out.println(fChapter);
 
 			try {
-				Document doc = Jsoup.parse(f, "UTF-8");
-				Elements ps = doc.select("p.p , div.lg");
+				Document doc = Jsoup.parse(fChapter, "UTF-8");
+				Elements verses = doc.select("p.p , div.lg");
 				numVerse = 0;
 				StringBuilder verse = new StringBuilder();
-				for (Element p: ps) {
+				Stack<String> subTitles = new Stack<>(); // Comme on récupere les sous-titres à l'envers, on les stocke dans une stack pour les récupérer à l'endroit
+				for (Element xmlVerse: verses) {
+
+					// Recherche des sous-titre(s) accolés au verset courant
+					Element title = xmlVerse.previousElementSibling();
+					boolean hasTitle = title != null && title.hasClass("title");
+					while (hasTitle) {
+
+						subTitles.push(title.toString());
+						title = title.previousElementSibling(); // On recule d'un élément
+						hasTitle = title != null && title.hasClass("title");
+					}
 
 					fromGlossary = false;
-					for (Node child: p.childNodes()) {
+					for (Node child: xmlVerse.childNodes()) {
 
-						String s = child.toString();
-						if (s.startsWith("<div class=\"osis_l")) {
+						String xml = child.toString();
+						if (xml.startsWith("<div class=\"osis_l")) { // verset poetique, indenté dans le livre
 
 							for (Node divChildren: child.childNodes()) {
 
-								s = divChildren.toString();
-								decodeVerse(s, verse);
+								xml = divChildren.toString();
+								decodeVerse(xml, subTitles, verse);
 							}
 
 							continue;
 						}
 
-						decodeVerse(s, verse);
+						decodeVerse(xml, subTitles, verse);
 					}
 
-					printVerse(verse.toString());
-					verse.setLength(0);
+					printVerse(verse);
 				}
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
-
-//			if (books.size() == 1)
-//				break; // Code de débogage: si on ne génère qu'un seul livre, on s'arrete au premier chapitre
 		}
 	}
 
 	private void addSpace(String s1, StringBuilder verse)
 	{
 		if (! s1.isEmpty() &&     	  // Gen 26.29: le mot du glossaire est le dernier mot du verset précédent
-				  verse.length() > 0) // Nb  23.19: le mot du glossaire est le premier mot du verset courant.
-		{
+				verse.length() > 0) { // Nb  23.19: le mot du glossaire est le premier mot du verset courant.
+
 			char c1 = s1.charAt(0);
 			char c2 = verse.charAt(verse.length() -1);
 
 			if ((Character.isLetter(c1) ||
-					c1 == '(') // 3 Jn 1:7 : *Nom (du Seigneur  au lieu de  *Nom(du Seigneur
-					&& Character.isLetter(c2)) {
+					c1 == '(')          &&    // 3 Jn 1:7 : *Nom (du Seigneur  au lieu de  *Nom(du Seigneur
+					Character.isLetter(c2)) {
+
 				verse.append(" ");
 			}
 		}
 	}
 
-	private void decodeVerse(String s, StringBuilder verse)
+	private void decodeVerse(String xml, Stack<String> subTitles, StringBuilder verse)
 	{
-		boolean citation = s.startsWith("<span class=\"otPassage\"");
+		boolean citation = xml.startsWith("<span class=\"otPassage\"");
 		if (citation) {
+
 			String sep = "";
 			if (verse.length() > 0) {
+
 				char c = verse.charAt(verse.length() -1);
 				if (Character.isLetter(c))
 					sep = " ";
 			}
 
 			verse.append(sep).append("<i>"); // On met les citations de l'ancien testament en italique
-		} else if (s.startsWith("<span class="))
+		} else if (xml.startsWith("<span class="))
 			return;
 
-		if (s.startsWith("<a class=\"verse\"")) {
+		if (xml.startsWith("<a class=\"verse\"")) {
 
 			// Cloture du verset précédent
-			if (verse.length() > 0) {
-				printVerse(verse.toString());
-				verse.setLength(0);
-			}
+			if (verse.length() > 0)
+				printVerse(verse);
 
 			numVerse++;
 			return;
 		}
 
-		Document d = Jsoup.parse(s);
-		String s1 = d.text();
-		if (s.startsWith("<a class=\"w-gloss\"") || fromGlossary) {
+		// insertion des sous-titres
+		while (! subTitles.isEmpty()) {
+
+			String title = subTitles.pop();
+			boolean isReference = title.contains("<span class=\"reference\">");
+			Document t = Jsoup.parse(title);
+			title = isReference ? ReferenceUtil.decode(t.text()) : t.text();
+
+			verse.append("<TS>").append(title).append("<Ts>");
+		}
+
+		Document doc = Jsoup.parse(xml);
+		String text = doc.text();
+		if (xml.startsWith("<a class=\"w-gloss\"") || fromGlossary) {
 
 			if (! fromGlossary)
-				s1 = Glossary.getGlossaryLink(s, false);
+				text = Glossary.getGlossaryLink(xml, false);
 
-			addSpace(s1, verse);
+			addSpace(text, verse);
 			fromGlossary = ! fromGlossary;
 		}
 
-		verse.append(s1);
+		verse.append(text);
 		if (citation)
 			verse.append("</i> ");
 	}
 
-	private void printVerse(String verse)
+	private void printVerse(StringBuilder verse)
 	{
 		if (oldBS == null || oldBS.getNumVerse() != numVerse) {
-			BookStructure b = new BookStructure(numBook, numChapter, numVerse, verse);
-			data.add(b);
-			oldBS = b;
+
+			BookStructure bs = new BookStructure(numBook, numChapter, numVerse, verse);
+			data.add(bs);
+			oldBS = bs;
 		} else {
+
 			// Suite du verset précédent
-			StringBuilder old = new StringBuilder(oldBS.getVerse()).append(verse);
-			oldBS.setVerse(old.toString());
+			verse.insert(0, oldBS.getVerse());
+			oldBS.setVerse(verse);
 		}
+
+		verse.setLength(0);
 	}
 
 	/*
@@ -189,6 +215,7 @@ public class Books {
 
 			@Override
 			public boolean accept(File dir, String filename) {
+
 				return filename.startsWith(book + "-");
 			}
 		});
@@ -206,7 +233,6 @@ public class Books {
 
 	        	Long i1 = getNumChapter(f1.getName());
 	        	Long i2 = getNumChapter(f2.getName());
-
 	        	return i1.compareTo(i2);
 	        }
 	    };

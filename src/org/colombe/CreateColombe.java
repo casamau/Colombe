@@ -8,10 +8,10 @@ import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 
+import org.colombe.utils.BibleCreator;
+
 import net.lingala.zip4j.core.ZipFile;
 import net.lingala.zip4j.exception.ZipException;
-
-import org.colombe.utils.BibleCreator;
 
 public class CreateColombe {
 
@@ -22,7 +22,7 @@ public class CreateColombe {
 		/* Chemin des fichiers
 		 *
 		 * arg0: fichier epub
-		 * arg1: fichier destination (optionnel, colombe.bbl.mybible par defaut)
+		 * arg1: fichier destination (optionnel, colombe.bbl.mybible par defaut) NON implémenté
 		 */
 
 		if (args.length != 1) {
@@ -49,13 +49,14 @@ public class CreateColombe {
 			unzip(epub.getAbsolutePath(), tempDir.toString());
 
 			BibleCreator bc = new BibleCreator(tempDir.toString(), bibleName);
-			bc.createBible();
+			bc.createBible(); // Go
 		} catch(Exception ex) {
 			ex.printStackTrace();
 		} finally {
 			removeRecursive(tempDir);
 		}
 
+		System.out.println("Termine");
 		System.exit(0);
 	}
 
@@ -71,6 +72,9 @@ public class CreateColombe {
 
 	public static void removeRecursive(Path path)
 	{
+		if (path == null)
+			return;
+
 		try {
 		    Files.walkFileTree(path, new SimpleFileVisitor<Path>()
 		    {
