@@ -144,6 +144,7 @@ public class Glossary {
 		}
 
 		return "<RF q=*><b>" + word + "</b>:" + definition + "<Rf>" + word;
+		//return "<RF q=" + word + "><b>" + word + "</b>:" + definition + "<Rf>"; // Bonne idée, mais pb d'espace
 	}
 
 	private static String[] getHrefParams(String hrefLink)
@@ -248,6 +249,10 @@ public class Glossary {
 
 	private static String getBibleLink(String hrefLink)
 	{
+		// Correction des erreurs de référence dans le glossaire
+		if (hrefLink.equals("<a class=\"reference\" href=\"2John.xml\">2</a>"))
+			hrefLink = "<a class=\"reference\" href=\"2John.xml\">2 Jn</a>";
+
 		StringBuilder result = new StringBuilder("<a class=\"bible\" href=\"#b");
 
 		// On extrait le nom du livre à partir du href

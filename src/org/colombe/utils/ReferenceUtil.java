@@ -36,7 +36,6 @@ public class ReferenceUtil {
 		String[] tabRef = references.split(";|et|comp.|, ");
 		for (String ref: tabRef) {
 			ref = ref.trim();
-			System.out.println(ref);
 			String[] tRef = ref.split(" "); // Pour pouvoir récupérer le nom du livre (et donc, son numéro)
 			List<String> aRef = new ArrayList<>();
 			aRef.addAll(Arrays.asList(tRef));
@@ -95,7 +94,6 @@ public class ReferenceUtil {
 		}
 
 		result.delete(result.length() - 3, result.length()); // On enleve le dernier " ; "
-		System.out.println(result);
 	}
 
 	private static String getSeparator(String references, String ref) {
