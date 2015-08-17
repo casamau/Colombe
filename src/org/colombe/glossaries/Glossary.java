@@ -173,14 +173,18 @@ public class Glossary {
 					if (suite.trim().isEmpty() || suite.startsWith("<span class=\"label\">"))
 						continue;
 
-					if (suite.startsWith(",") && Character.isDigit(suite.charAt(1)) && bibleRef != null) {
+					String delimiter = ",";
+					if (suite.startsWith("–"))
+						delimiter = "–"; // Dans "lèpre", nous avons une reference Lv 13–14
+
+					if (suite.startsWith(delimiter) && Character.isDigit(suite.charAt(1)) && bibleRef != null) {
 
 						// Nous étions dans une référence, et nous avons là des versets.
 						// Par exemple: 1 S 10:6,10
 						// La référence sur 1 S 10:6 a déjà été faite,
 						// on va ajouter maintenant la référence vers 1 S 10:6:10
 
-						String[] tabRef = suite.split(",");
+						String[] tabRef = suite.split(delimiter);
 						for (String ref: tabRef) {
 							if (ref.isEmpty())
 								continue;
@@ -205,7 +209,7 @@ public class Glossary {
 							StringBuilder newRef = new StringBuilder(bibleRef.substring(0, bibleRef.lastIndexOf('.') +1));
 							newRef.append(verseNumber).append("\">").append(verseNumber).append("</a>");
 
-							result.append(",").append(newRef).append(text);
+							result.append(delimiter).append(newRef).append(text);
 						}
 
 						bibleRef = null;
@@ -252,6 +256,7 @@ public class Glossary {
 		// Correction des erreurs de référence dans le glossaire
 		if (hrefLink.equals("<a class=\"reference\" href=\"2John.xml\">2</a>"))
 			hrefLink = "<a class=\"reference\" href=\"2John.xml\">2 Jn</a>";
+
 
 		StringBuilder result = new StringBuilder("<a class=\"bible\" href=\"#b");
 
